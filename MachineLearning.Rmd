@@ -1,0 +1,127 @@
+---
+title: "Practical Machine Language"
+author: "Carlos  Martinez"
+date: "March 2, 2016"
+output: html_document
+---
+
+# Practical Machine Learning 
+
+
+# Background:
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible 
+to collect a large amount of data about personal activity relatively inexpensively. 
+These type of devices are part of the quantified self movement - a group of 
+enthusiasts who take measurements about themselves regularly to improve their health, 
+to find patterns in their behavior, or because they are tech geeks. One thing that 
+people regularly do is quantify how much of a particular activity they do, but they 
+rarely quantify how well they do it. In this project, your goal will be to use data 
+from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. 
+They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+Data:
+
+```
+Training data:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+Test data:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+```
+# Prediction:
+
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. 
+
+You will also use your prediction model to predict 20 different test cases. 
+
+
+
+1. Load library's and read in train and test Data
+```
+library(caret)
+pml.train <- read.csv("pml_training.csv")
+pml.test <- read.csv("pml_testing.csv")
+```
+
+```{r include=FALSE, echo=FALSE, cache=FALSE}
+library(caret)
+pml.train <- read.csv("pml_training.csv")
+pml.test <- read.csv("pml_testing.csv")
+```
+
+\pagebreak
+
+2. We next examine the test data : `pml.test`
+
+```
+ a. We search for data without NA's
+ b. Those values without NA's become possible predictor's
+ c. Search for belt , arm and dumbbell keywords.
+```
+
+```{r}
+tmpMissing <- sapply(pml.test, function (x) any(is.na(x) | x == ""))
+tmpPredictor <- !tmpMissing & grepl("belt|[^(fore)]arm|dumbbell|forearm", names(tmpMissing))
+Predictors <- names(tmpMissing)[tmpPredictor]
+Predictors
+```
+3. Next extract the `Predictors` and `classe` variables from pml.train
+
+```{r}
+pml.train <- pml.train[, c("classe", Predictors)]
+dim(pml.train)
+```
+
+4.We are now ready to work with the pml.train  dataset.
+  We split the dataset into proportions of 60/40 : training/testing
+  
+```{r}
+set.seed(12345)
+trainIndex <- createDataPartition(y=pml.train$classe, p=0.6, list=FALSE)
+training <- pml.train[trainIndex, ]
+testing <- pml.train[-trainIndex, ]
+dim(training); dim(testing)
+```
+
+\pagebreak
+
+# Classification Tree diagram with prediction
+```{r}
+library(rpart)
+rpFit <- rpart(classe ~ ., data=training, method = "class") 
+library(rpart.plot)
+prp(rpFit)
+predictz <- predict(rpFit, testing, type = "class")
+```
+\pagebreak
+
+## Now for classification tree Confusion Matrix
+```{r}
+confusionMatrix(predictz, testing$classe)
+```
+
+
+\pagebreak
+
+# Random Forest  with prediction in-sample error
+```
+library(randomForest)
+rfFit <- randomForest(classe ~. , data=training)
+predictx <- predict(rfFit, testing, type = "class")
+```
+
+```{r include=FALSE, echo=FALSE, cache=FALSE}
+library(randomForest)
+rfFit <- randomForest(classe ~. , data=training)
+predictx <- predict(rfFit, testing, type = "class")
+```
+## Now for random forest  Confusion Matrix
+
+```{r}
+confusionMatrix(predictx, testing$classe)
+```
+
+# Comparing both , Random Forest shows the best promise.
+
+We will use Random Forest for predictions
+
